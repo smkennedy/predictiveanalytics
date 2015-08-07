@@ -64,65 +64,6 @@ Bootstrapping - ETF Data
 For this analysis, I pulled price data and calculated daily returns for
 the period 8/1/2010 to 7/31/2015.
 
-    ## Loading required package: timeDate
-    ## Loading required package: timeSeries
-    ## Loading required package: car
-    ## Loading required package: dplyr
-    ## 
-    ## Attaching package: 'dplyr'
-    ## 
-    ## The following objects are masked from 'package:timeSeries':
-    ## 
-    ##     filter, lag
-    ## 
-    ## The following objects are masked from 'package:plyr':
-    ## 
-    ##     arrange, count, desc, failwith, id, mutate, rename, summarise,
-    ##     summarize
-    ## 
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     filter, lag
-    ## 
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     intersect, setdiff, setequal, union
-    ## 
-    ## Loading required package: lattice
-    ## Loading required package: ggplot2
-    ## Loading required package: mosaicData
-    ## 
-    ## Attaching package: 'mosaic'
-    ## 
-    ## The following objects are masked from 'package:dplyr':
-    ## 
-    ##     count, do, tally
-    ## 
-    ## The following object is masked from 'package:car':
-    ## 
-    ##     logit
-    ## 
-    ## The following objects are masked from 'package:timeSeries':
-    ## 
-    ##     quantile, sample
-    ## 
-    ## The following object is masked from 'package:timeDate':
-    ## 
-    ##     sample
-    ## 
-    ## The following object is masked from 'package:plyr':
-    ## 
-    ##     count
-    ## 
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     binom.test, cor, cov, D, fivenum, IQR, median, prop.test,
-    ##     quantile, sd, t.test, var
-    ## 
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     max, mean, min, prod, range, sample, sum
-
 To analyze the relative returns and risk for each of the ETFs over the
 time period, I calculated the standard deviation, mean, and range of
 returns below:

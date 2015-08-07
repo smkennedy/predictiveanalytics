@@ -63,7 +63,7 @@ The poorer populations were clearly more adversely affected by undercounting. Op
 
 For this analysis, I pulled price data and calculated daily returns for the period 8/1/2010 to 7/31/2015.
 
-```{r, echo = FALSE, warning = FALSE}
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
 library(fImport)
 library(foreach)
 library(mosaic)
