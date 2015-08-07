@@ -64,25 +64,10 @@ Bootstrapping - ETF Data
 For this analysis, I pulled price data and calculated daily returns for
 the period 8/1/2010 to 7/31/2015.
 
-    ## Warning: package 'fImport' was built under R version 3.2.1
-
     ## Loading required package: timeDate
-
-    ## Warning: package 'timeDate' was built under R version 3.2.1
-
     ## Loading required package: timeSeries
-
-    ## Warning: package 'timeSeries' was built under R version 3.2.1
-
-    ## Warning: package 'foreach' was built under R version 3.2.1
-
-    ## Warning: package 'mosaic' was built under R version 3.2.1
-
     ## Loading required package: car
     ## Loading required package: dplyr
-
-    ## Warning: package 'dplyr' was built under R version 3.2.1
-
     ## 
     ## Attaching package: 'dplyr'
     ## 
@@ -105,13 +90,7 @@ the period 8/1/2010 to 7/31/2015.
     ## 
     ## Loading required package: lattice
     ## Loading required package: ggplot2
-
-    ## Warning: package 'ggplot2' was built under R version 3.2.1
-
     ## Loading required package: mosaicData
-
-    ## Warning: package 'mosaicData' was built under R version 3.2.1
-
     ## 
     ## Attaching package: 'mosaic'
     ## 
