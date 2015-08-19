@@ -1,0 +1,395 @@
+---
+title: "Excercises 2"
+author: "Shane Kennedy"
+date: "Friday, August 14, 2015"
+output:  md_document
+---
+
+###Flights at ABIA
+```{r, echo = FALSE, warning= FALSE, message = FALSE}
+library(dplyr)
+library(plyr)
+library(tidyr)
+library(maps)
+library(geosphere)
+library(RColorBrewer)
+flights = read.csv("https://raw.githubusercontent.com/jgscott/STA380/master/data/ABIA.csv")
+```
+
+**Approach for Visualization**
+
+With the flights data, I wanted to create something using the maps package as I haven't had previous experience with designing graphics on top of maps. The data also lends itself well to a network map--where connections  between AUS and other airports could be clearly visible. I decided that a good question to answer with such a map is how arrivals and departures vary between winter (defined as Dec. - Feb.) and summer months (defined as Jun. - Aug.).
+
+To start, I found a dataset (also on GitHub) with the latitudes and longitudes for all airport codes and extracted the information I required. I then created subsets of the Austin flights data for the summer and winter months.
+
+```{r, echo = FALSE, warning = FALSE}
+##Importing dataset with latitude/long. for airports
+airports = read.csv("https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat", header=FALSE)
+
+##Selecting and renaming relevant variables
+airports = dplyr::select(airports, V5, V7, V8)
+names(airports)[1] = "Code" 
+names(airports)[2] = "Lat" 
+names(airports)[3] = "Long"
+
+##Defining subsets for seasons
+flightswinter = subset(flights, Month == 12 | Month == 1 | Month == 2)
+flightssummer = subset(flights, Month == 6 | Month == 7 | Month == 8)
+```
+
+Once I had these subsets, I aggregated all origin/destination code pairs to get the counts for each during each time period. I then split this aggregated data into depature (where the origin is AUS) and arrival subsets.
+
+
+```{r, echo = FALSE, warning = FALSE}
+##Aggregating subsets to get flight count for each destination and origin
+fsum = dplyr::select(flightssummer, Origin, Dest)
+fsum$Origin = factor(fsum$Origin, levels=levels(airports$Code))
+fsum$Dest = factor(fsum$Dest, levels=levels(airports$Code))
+fsum$count = 1
+fsum = aggregate(count ~ Dest + Origin, data = fsum, FUN = length)
+
+##Splitting into arrival/departure subsets
+fsumarv = subset(fsum, Origin != "AUS")
+fsumdep = subset(fsum, Dest != "AUS")
+
+##Repeating above for winter months
+fwint = dplyr::select(flightswinter, Origin, Dest)
+fwint$count = 1
+fwint = aggregate(count ~ Dest + Origin, data = fwint, FUN = length)
+fwint$Origin = factor(fwint$Origin, levels=levels(airports$Code))
+fwint$Dest = factor(fwint$Dest, levels=levels(airports$Code))
+fwintarv = subset(fwint, Origin != "AUS")
+fwintdep = subset(fwint, Dest != "AUS")
+```
+
+With the data prepared, I plotted the maps using the maps package and used the geosphere package to iterate over each subset and plot connections between AUS and the other airports. The geosphere package uses sphereical trigonometry and the connections are plotted using great circles (so realistically given the Earth's geometry).
+
+````{r, echo = FALSE, warning = FALSE}
+#Prepping the plotting area & defining colors to be used
+par(mfrow=c(2,2), xpd = NA)
+colors = brewer.pal(7, "Blues")[c(2:7)]
+colors2 = brewer.pal(7, "Greens")[c(2:7)]
+
+##Plotting maps and iterating through subsets to draw the lines between airports
+##Repeated for depatures and arrivals for summer and winter
+map("state", col="light grey", fill=FALSE, bg="white", mar = c(1,1,3,1))
+title("Departures from AUS - Summer")
+fsumdep = fsumdep[order(fsumdep$count),]
+maxcnt = max(fsumdep$count)
+for (j in 1:length(fsumdep$Dest)) {
+    air1 <- airports[airports$Code == fsumdep[j,]$Origin,]
+    air2 <- airports[airports$Code == fsumdep[j,]$Dest,]
+    inter <- gcIntermediate(c(air1[1,]$Long, air1[1,]$Lat), c(air2[1,]$Long, air2[1,]$Lat), n=100, addStartEnd=TRUE)
+    colindex <- round( (fsumdep[j,]$count / maxcnt) * length(colors) )           
+    lines(inter, col=colors[colindex], lwd=0.8)
+}
+
+map("state", col="light grey", fill=FALSE, bg="white", mar = c(1,1,3,1))
+title("Arrivals to AUS - Summer")
+fsumarv = fsumarv[order(fsumarv$count),]
+maxcnt = max(fsumarv$count)
+for (j in 1:length(fsumarv$Dest)) {
+    air1 <- airports[airports$Code == fsumarv[j,]$Origin,]
+    air2 <- airports[airports$Code == fsumarv[j,]$Dest,]
+    inter <- gcIntermediate(c(air1[1,]$Long, air1[1,]$Lat), c(air2[1,]$Long, air2[1,]$Lat), n=100, addStartEnd=TRUE)
+    colindex <- round( (fsumarv[j,]$count / maxcnt) * length(colors2) )           
+    lines(inter, col=colors2[colindex], lwd=0.8)
+}
+
+map("state", col="light grey", fill=FALSE, bg="white", mar = c(1,1,3,1))
+title("Departures from AUS - Winter")
+fwintdep = fwintdep[order(fwintdep$count),]
+maxcnt = max(fwintdep$count)
+for (j in 1:length(fwintdep$Dest)) {
+    air1 <- airports[airports$Code == fwintdep[j,]$Origin,]
+    air2 <- airports[airports$Code == fwintdep[j,]$Dest,]
+    inter <- gcIntermediate(c(air1[1,]$Long, air1[1,]$Lat), c(air2[1,]$Long, air2[1,]$Lat), n=100, addStartEnd=TRUE)
+    colindex <- round( (fwintdep[j,]$count / maxcnt) * length(colors) )           
+    lines(inter, col=colors[colindex], lwd=0.8)
+}
+
+map("state", col="light grey", fill=FALSE, bg="white", mar = c(1,1,3,1))
+title("Arrivals to AUS - Winter")
+fwintarv = fwintarv[order(fwintarv$count),]
+maxcnt = max(fwintarv$count)
+for (j in 1:length(fwintarv$Dest)) {
+    air1 <- airports[airports$Code == fwintarv[j,]$Origin,]
+    air2 <- airports[airports$Code == fwintarv[j,]$Dest,]
+    inter <- gcIntermediate(c(air1[1,]$Long, air1[1,]$Lat), c(air2[1,]$Long, air2[1,]$Lat), n=100, addStartEnd=TRUE)
+    colindex <- round( (fwintarv[j,]$count / maxcnt) * length(colors2) )           
+    lines(inter, col=colors2[colindex], lwd=0.8)
+}
+
+legend(x = -190, y = 68,c("Low","","High"),col=colors,pch=c(15), title = "Departure Freq.", bty = "n")
+legend(x = -125, y = 68,c("Low","","High"),col=colors2,pch=c(15), title = "Arrival Freq.", bty = "n")
+```
+
+**Analysis of Visualization**
+
+The visualization shows there are clear differences in departures and arrivals between the summer and winter months. In the winter, a much larger proportion of flights are between AUS and other Texas airports. This makese inuitive sense--people do less vacationing and traveling in the winter, so most of the flights are short distance and remain within the state. The flights to Florida are a great example of this effect. In the winter, there are no flights to Florida. 
+
+However, the relative number of departures versus arrivals from each airport seems to be fairly similar within each season.
+
+One important note is that we can't compare magnitude across the maps because the coloring is done on a relative basis within each map. In other words, the darkest blue in the top left map represents the most frequent connections within that specific map and the absolute number of flights between dark blue connections in the summer v. the winter may be different. I could have colored the lines based on the frequency relative to the total number of arrivals and departures throughout the year but that would have resulted in less interpretability within each map.
+
+###Author Attribution
+
+To start, I extracted the directory names for all folders in C50train and then used this list to read in all text files for all authors into one list. I used this to create my training corpus and to begin the process of working with the text data. I applied the following tm_map functions: tolower, removeNumbers, removePunctuation, stripWhitespace. I also removed english stop words as well as "next", "else", and "break"--these words caused issues with my models as they are reserved words in R. 
+
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+source('https://raw.githubusercontent.com/jgscott/STA380/master/R/textutils.R')
+library(tm)
+library(SnowballC)
+library(MASS)
+library(caret)
+library(e1071)
+library(randomForest)
+
+#Reading in training files
+readerPlain = function(fname){
+  readPlain(elem=list(content=readLines(fname)),
+                  id=fname, language='en') }
+
+directory = dir("//SHANE/Users/Shane/Documents/GitHub/STA380/data/ReutersC50/C50train/", full.names = TRUE)
+directory = lapply(directory, paste0, "/*.txt")
+directoryfiles = sapply(directory, Sys.glob)
+
+allfiles= lapply(directoryfiles, readerPlain) 
+names(allfiles) = directoryfiles
+
+#Extracting author names from directory names
+authors = substring(names(allfiles),first=70)
+authors = t(data.frame(strsplit(authors, split = "/")))[1:2500]
+authors = as.data.frame(authors)
+
+names(allfiles) = substring(names(allfiles),first=70)
+names(allfiles) = sub('.txt', '', names(allfiles))
+
+#Creating corpus and applying basic tm_map manipulations 
+corpus = Corpus(VectorSource(allfiles))
+names(corpus) = names(allfiles)
+corpus = tm_map(corpus, content_transformer(tolower))
+corpus = tm_map(corpus, content_transformer(removeNumbers))
+corpus = tm_map(corpus, content_transformer(removePunctuation)) 
+corpus = tm_map(corpus, content_transformer(stripWhitespace))
+corpus = tm_map(corpus, content_transformer(removeWords), c(stopwords("en"),"next","else","break"))
+```
+
+After preparing my corpus, I created a DTM of the terms appearing in at least 2% of the documents. This left me with 1,895 terms which should be sufficient for running a model with 50 classifiers. The 2% cutoff should capture words that are relatively unique to a smaller subset of authors (as each author accounts for 2% of the training data). I tried other cut-offs for word frequency and found little improvement in the models. I converted this DTM to a dataframe and added the author names as a column so that I could use this dataframe with prediction packages in R. 
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+#Creating a DTM with terms appearing in 
+DTM = DocumentTermMatrix(corpus)
+DTM = removeSparseTerms(DTM, 0.98)
+train = as.data.frame(as.matrix(DTM))
+authors = as.data.frame(authors)
+train = cbind.data.frame(train,authors)
+```
+
+The first model I ran was a random forest model. I used the default values for mtry, or the number of variables used in each tree, (sqrt of N) and number of trees (500). Different values for mtry seemed to have little effect on the model and, with so many classifiers and terms, increasing the ntrees above 500 for at best a marginal improvement did not seem sensical from a computational perspective. 
+
+The variable importance discovered in the model is given by the plot below. We can see that the model finds terms related to certain countries/regions as very important. This makes sense--certain authors will cover certain regions so those terms would be effective for differentiating between the classes. 
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+set.seed(2)
+rfmodel = randomForest(train$authors~., data = train, importance = TRUE)
+varImpPlot(rfmodel)
+```
+
+The second model I decided to use was a linear discriminant analysis, with its output summarized below:
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+set.seed(2)
+ldamodel = lda(train$authors~.,data=train)
+summary(ldamodel)
+```
+
+To test the predictive power of these models, I read all of the test files into one corpus and applied the same tm_map transformers that I applied to the training corpus. 
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+##Reading in test files
+testdirectory = dir("//SHANE/Users/Shane/Documents/GitHub/STA380/data/ReutersC50/C50test/", full.names = TRUE)
+testdirectory = lapply(testdirectory, paste0, "/*.txt")
+testdirectoryfiles = sapply(testdirectory, Sys.glob)
+testfiles = lapply(testdirectoryfiles, readerPlain) 
+names(testfiles) = testdirectoryfiles
+
+##Extracting authors
+testauthors = substring(names(testfiles),first=69)
+testauthors = t(data.frame(strsplit(testauthors, split = "/")))[1:2500]
+
+names(testfiles) = substring(names(testfiles),first=69)
+names(testfiles) = sub('.txt', '', names(testfiles))
+
+#Creating a corpus and applying tm_map functions
+corpustest = Corpus(VectorSource(testfiles))
+names(corpustest) = names(testfiles)
+corpustest = tm_map(corpustest, content_transformer(tolower))
+corpustest = tm_map(corpustest, content_transformer(removeNumbers))
+corpustest = tm_map(corpustest, content_transformer(removePunctuation)) 
+corpustest = tm_map(corpustest, content_transformer(stripWhitespace))
+corpustest = tm_map(corpustest, content_transformer(removeWords), c(stopwords("en"),"next","else"))
+```
+
+After creating a testing corpus, I created a testing DTM that matched the terms in the training DTM. If any words were in the training set and not in the testing set, I added columns for those words and set all values equal to zero (as there were no occurances in the test files). If any words were in the testing set but not the training set, they were excluded.
+
+I removed new terms rather than incorporating them into my models because of the types of models I was using. Particularly, for random forests, there would be nothing for the model split on with new terms--so it only made sense to exlude them and conform the dimensions of my testing DTM to my training DTM.
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+testDTM = DocumentTermMatrix(corpustest)
+testmat = as.matrix(testDTM)
+trainmat = as.matrix(train)
+
+##Creating a testing DTM with the same columns as training
+xx <- data.frame(testmat[,intersect(colnames(testmat), colnames(trainmat))])
+yy <- read.table(textConnection(""), col.names = colnames(trainmat), colClasses = "integer")
+library(plyr)
+testclean = rbind.fill(xx, yy)
+
+##Filling missing NA values with 0's (as these words did not occur in the testing files)
+testclean[is.na(testclean)] = 0
+```
+
+Once I had a testing dataframe that matched the dimensions of my training dataframe, I ran predictions for both the random forest and LDA models. After making predictions, I used the caret and e1071 packages to create confusion matrices. These matrices give the overall statistics and accuracy below:
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+#Creating prediction vectors & confusion matrices
+predictrf = predict(rfmodel, newdata = testclean, type = "response", na.action=na.omit)
+rfcm = confusionMatrix(predictrf, testauthors)
+predictlda = predict(ldamodel, newdata= testclean)
+authorslda = predictlda$class
+ldacm = confusionMatrix(authorslda, testauthors)
+```
+
+**Random Forest Accuracy Result:**
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+rfcm$overall[1]
+```
+
+First 5 authors in confusion matrix:
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+rfcm$table[1:5,1:5]
+```
+
+**LDA Accuracy Result:**
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+ldacm$overall[1]
+```
+
+First 5 authors in confusion matrix:
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+ldacm$table[1:5,1:5]
+```
+
+The LDA model's underperformance may be due to several assumptions it makes--that the predictor distributions are gaussian with the same covariance structure. This may not be a great assumption considering that articles are written by people with bias towards certain language or wording. 
+
+While, at first glance, the accuracy scores don't appear to be great--it's important to note the difficulty of classifying text between 50 different authors from the same source. Many of the articles and authors are going to be similar and it will be hard to reliably classify articles in all cases. I think that, given this consideration, the accuracy scores are actually pretty reasonable. 
+
+It's easy to see why the models have difficulty discerning the correct author for certain articles when you look at pairs that were often confused. Looking at the confusion matrices, I found two sets of authors were frequently mistaken for each other under both models. Detail on these pairs is given below:
+
+**John Mastrini & Jan Lopatka**
+
+Number of times John Mastrini was incorrectly classified as Jan Lopatka:
+LDA:
+```{r, echo = FALSE, warning = FALSE}
+ldacm$table[,'JohnMastrini']['JanLopatka']
+```
+RF:
+```{r, echo = FALSE, warning = FALSE}
+rfcm$table[,'JohnMastrini']['JanLopatka']
+```
+
+Number of times Jan Lopatka was incorrectly classified as John Mastrini:
+LDA:
+```{r, echo = FALSE, warning = FALSE}
+ldacm$table[,'JanLopatka']['JohnMastrini']
+```
+RF:
+```{r, echo = FALSE, warning = FALSE}
+rfcm$table[,'JanLopatka']['JohnMastrini']
+```
+
+John Mastrini - 15 most freq. words (in testing DTM):
+```{r, echo = FALSE, warning = FALSE}
+test = cbind(testclean, testauthors)
+johnmastrini = subset(test, testauthors == "JohnMastrini")
+johnmastrini = dplyr::select(johnmastrini, -testauthors)
+johnmastrini = johnmastrini[,order(-colSums(johnmastrini))]
+colSums(johnmastrini[1:15])
+```
+
+Jan Lopatka - 15 most freq. words (in testing DTM):
+```{r, echo = FALSE, warning = FALSE}
+janlopatka = subset(test, testauthors == "JanLopatka")
+janlopatka = dplyr::select(janlopatka, -testauthors)
+janlopatka = janlopatka[,order(-colSums(janlopatka))]
+colSums(janlopatka[1:15])
+```
+
+With the top 15 words, there is some clear overlap that could explain the confusion between these two authors. Both frequently mention similar terms that seem to be related to the czech government and finance and the top three terms are the same for both. 
+
+**Darren Schuettler & Heather Scoffield**
+
+Number of times Darren Scheuttler was incorrectly classified as Heather Scoffield:
+LDA:
+```{r, echo = FALSE, warning = FALSE}
+ldacm$table[,'DarrenSchuettler']['HeatherScoffield']
+```
+RF:
+```{r, echo = FALSE, warning = FALSE}
+rfcm$table[,'DarrenSchuettler']['HeatherScoffield']
+```
+
+Number of times Heather Scoffield was incorrectly classified as Darren Scheuttler:
+LDA:
+```{r, echo = FALSE, warning = FALSE}
+ldacm$table[,'HeatherScoffield']['DarrenSchuettler']
+```
+RF:
+```{r, echo = FALSE, warning = FALSE}
+rfcm$table[,'HeatherScoffield']['DarrenSchuettler']
+```
+
+Darren Schuettler - 15 most freq. words (in testing DTM):
+```{r, echo = FALSE, warning = FALSE}
+par(mfrow=c(1,2))
+darrenschuettler = subset(test, testauthors == "DarrenSchuettler")
+darrenschuettler = dplyr::select(darrenschuettler, -testauthors)
+darrenschuettler = darrenschuettler[,order(-colSums(darrenschuettler))]
+colSums(darrenschuettler[1:15])
+```
+
+Heather Scoffield - 15 most freq. words (in testing DTM):
+```{r, echo = FALSE, warning = FALSE}
+heatherscoffield = subset(test, testauthors == "HeatherScoffield")
+heatherscoffield = dplyr::select(heatherscoffield, -testauthors)
+heatherscoffield = heatherscoffield[,order(-colSums(heatherscoffield))]
+colSums(heatherscoffield[1:15])
+```
+
+Again, it's easy to see what terms are driving the errors in the models. Both authors here speak frequently about terms related to canada, government, and financial exchanges. The random forest model did perform markedly worse for these authors than the LDA model, which is especially interesting given the relative performance on the entire test set. It's difficult to say exactly what is causing this--perhaps certain nodes related to the canadian government or financial sector in the random forest resulted in an unusual frequency of misclassification for this set of authors.
+
+
+
+###Practice with Association Rule Mining
+
+To read in the txt file, I used the read.transactions() function from the arules package. This allowed me to read the file in directly into the basket format for transactions and immediately run apriori() to develop some rules. I tried several support and confidence levels and found a support of .001 and confidence of .75 to give a reasonable number of rules (62 in total) to examine while maintaining pretty strong associations. This implies that, for the rules discovered, the item sets must appear in at least 0.1% of the baskets (or ~10 of 9,835) and must have 75% probability of occurance. I also limited the length to 3 to keep to rules straightforward--I changed this to 4 and got 454 additional rules, so I thought it was better to limit the rule set to simple associations for the purposes of this excercise. 
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+library(arules)
+groceries = read.transactions("https://raw.githubusercontent.com/jgscott/STA380/master/data/groceries.txt", format = "basket", sep = ",")
+set.seed(2)
+```
+
+Apriori() function output:
+```{r, echo = FALSE, warning = FALSE}
+groceryrules = apriori(groceries, parameter=list(support=.001, confidence=.75, maxlen = 3))
+```
+
+To extract the strongest associations from the 62 rules, I ordered the rules by confidence and pulled the top 10, which can be seen below:
+
+```{r, echo = FALSE, warning = FALSE}
+groceryrules = sort(groceryrules, by="confidence", decreasing= TRUE)
+arules::inspect(groceryrules[1:10])
+```
+
+All of these rules have high confidence, but rule 10 has exceptionally high lift. This means that the confidence for the association greatly exceeds the expected confidence. The rule makes sense--it is not suprising that people who buy alcohol may buy several kinds together. A more interesting rule is rule 2. Why whole milk is frequently purchasee with canned fish and hygiene articles is not immediately clear to me, but the confidence and lift are both fairly high. In general, there were a lot of strong associations with whole milk. This could simply be because milk is a staple grocery item that people buy regardless of what else they have on the shopping list. 
